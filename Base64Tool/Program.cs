@@ -41,7 +41,7 @@ namespace Base64Tool
 			{
 				long total;
 				if (encode) total = (input.Length + 2 - ((input.Length + 2) % 3)) / 3 * 4;
-				else total = (input.Length + 2 - ((input.Length + 2) % 3)) / 3 * 4;
+				else total = (input.Length / 4) * 3;
 
 				var buffer = new byte[42 * 1024 * base64Transform.InputBlockSize];
 				long totalBytesRead = 0;
