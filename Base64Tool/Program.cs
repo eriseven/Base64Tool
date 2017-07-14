@@ -25,19 +25,24 @@ namespace Base64Tool
 				Console.WriteLine("Invalid arg: " + args[0]);
 				return;
 			}
-
-			if (encode) Encode(args[1]);
-			else Decode(args[1]);
+			
+			Coder(args[1], encode);
 		}
 
-		private static void Encode(string filename)
+		private static void Coder(string filename, bool encode)
 		{
-			var base64Transform = new ToBase64Transform();
+			ICryptoTransform base64Transform;
+			if (encode) base64Transform = new ToBase64Transform();
+			else base64Transform = new FromBase64Transform();
+
 			using (var input = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.None))
-			using (var output = new FileStream(filename + ".encoded", FileMode.Create, FileAccess.Write, FileShare.None))
+			using (var output = new FileStream(filename + (encode ? ".encoded" : ".decoded"), FileMode.Create, FileAccess.Write, FileShare.None))
 			using (var cryptoStream = new CryptoStream(input, base64Transform, CryptoStreamMode.Read))
 			{
-				long total = (input.Length + 2 - ((input.Length + 2) % 3)) / 3 * 4;
+				long total;
+				if (encode) total = (input.Length + 2 - ((input.Length + 2) % 3)) / 3 * 4;
+				else total = (input.Length + 2 - ((input.Length + 2) % 3)) / 3 * 4;
+
 				var buffer = new byte[42 * 1024 * base64Transform.InputBlockSize];
 				long totalBytesRead = 0;
 
@@ -50,33 +55,7 @@ namespace Base64Tool
 					output.Write(buffer, 0, bytesRead);
 
 					int percent = (int)((totalBytesRead / (double)total) * 100.0);
-					if (lastPercent != percent) Console.WriteLine("Encoded: " + percent + '%');
-					lastPercent = percent;
-				}
-			}
-		}
-
-		private static void Decode(string filename)
-		{
-			var base64Transform = new FromBase64Transform();
-			using (var input = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.None))
-			using (var output = new FileStream(filename + ".decoded", FileMode.Create, FileAccess.Write, FileShare.None))
-			using (var cryptoStream = new CryptoStream(input, base64Transform, CryptoStreamMode.Read))
-			{
-				long total = (input.Length / 4) * 3;
-				var buffer = new byte[42 * 1024 * base64Transform.InputBlockSize];
-				long totalBytesRead = 0;
-
-				int lastPercent = -1;
-				while (!cryptoStream.HasFlushedFinalBlock)
-				{
-					Array.Clear(buffer, 0, buffer.Length);
-					int bytesRead = cryptoStream.Read(buffer, 0, buffer.Length);
-					totalBytesRead += bytesRead;
-					output.Write(buffer, 0, bytesRead);
-
-					int percent = (int)((totalBytesRead / (double)total) * 100.0);
-					if (lastPercent != percent) Console.WriteLine("Decoded: " + percent + '%');
+					if (lastPercent != percent) Console.WriteLine((encode ? "Encoded: " : "Decoded: ") + percent + '%');
 					lastPercent = percent;
 				}
 			}
